@@ -11,9 +11,9 @@ import { DepartmentRequestDto } from './department-request.dto';
 export class DepartmentCreateRequestDto extends OmitType(
     DepartmentRequestDto,
     [
-        'department_id',
-        'is_active',
-        'is_deleted'
+        'departmentId',
+        'isActive',
+        'isDeleted'
     ] as const
 ) {
 

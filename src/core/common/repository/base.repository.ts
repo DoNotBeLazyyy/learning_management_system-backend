@@ -1,7 +1,8 @@
 import { Pool, RowDataPacket } from 'mysql2/promise';
 import { DatabaseService } from 'src/database/service/database.service';
-import { StringNullUndefined, StringNumberSymbol } from '../dto/common.dto';
-import { numberOrNull } from '../util/clean.util';
+// prettier-ignore
+import { StringNumberSymbol } from '../dto/common.dto';
+import { sanitizeNumberValue } from '../util/clean.util';
 
 /**
  * Base repository class for shared database access logic.
@@ -35,7 +36,7 @@ export abstract class BaseRepository {
         D extends StringNumberSymbol
     >(
         duplicateColumn: D,
-        value: StringNullUndefined,
+        value: string,
         tableName: string,
         duplicateFieldColumns: Record<D, string>,
         excludedId?: number
@@ -44,10 +45,10 @@ export abstract class BaseRepository {
             return false;
         }
 
-        const sanitizedexcludedId = numberOrNull(excludedId);
+        const sanitizedexcludedId = sanitizeNumberValue(excludedId);
         const [rows] = await this.pool.query<T[]>(
             `SELECT
-                ${tableName}_id
+                ${tableName}_id AS ${tableName}Id
             FROM
                 ${tableName}
             WHERE

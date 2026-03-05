@@ -1,5 +1,7 @@
 // prettier-ignore
-import { DateNull, NumberNull, StringNull } from 'src/core/common/dto/common.dto';
+import { PickType } from '@nestjs/swagger';
+// prettier-ignore
+import { DateNull, NumberNull, StringNull, TinyIntFlag } from 'src/core/common/dto/common.dto';
 
 /**
  * DTO for department responses.
@@ -29,10 +31,10 @@ export class DepartmentDto {
     description!: StringNull;
 
     // Active flag (true = active, false = inactive).
-    isActive!: boolean;
+    isActive!: TinyIntFlag;
 
     // Soft delete flag (true = deleted, false = not deleted).
-    isDeleted!: boolean;
+    isDeleted!: TinyIntFlag;
 
     // User ID who created the record.
     createdBy!: NumberNull;
@@ -45,4 +47,20 @@ export class DepartmentDto {
 
     // Date/time when the record was last updated.
     updatedDate!: DateNull;
+}
+
+// prettier-ignore
+/**
+ * DTO for department select/dropdown options.
+ *
+ * Contains only the minimum department fields needed for selection inputs.
+ */
+export class DepartmentOptionDto extends PickType(
+    DepartmentDto,
+    [
+        'departmentId',
+        'name'
+    ] as const
+) {
+
 }

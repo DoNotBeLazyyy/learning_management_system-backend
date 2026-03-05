@@ -12,27 +12,13 @@ export function getFirstRowOrNull<T>(rows: T[]): T | null {
 }
 
 /**
- * Trims a string value and converts null/undefined to an empty string.
+ * Converts string value that is null/undefined to an empty string.
  *
  * @param value the string value to clean.
  * @return the cleaned string.
  */
-export function sanitizeStringValue(value: StringNullUndefined): string {
+export function stringValueOrEmpty(value: StringNullUndefined): string {
     return value ?? '';
-}
-
-/**
- * Normalizes a value to a number.
- * Defaults to a specified fallback if the input is null, undefined, or not a number.
- *
- * @param value the raw input to be normalized.
- * @param fallback the default value if the input is nullish.
- * @returns a number.
- */
-export function sanitizeNumberValue(value: NumberNullUndefined): number {
-    return typeof value === 'number' && !Number.isNaN(value)
-        ? Number(value)
-        : 0;
 }
 
 /**
@@ -42,18 +28,23 @@ export function sanitizeNumberValue(value: NumberNullUndefined): number {
  * @param value the string value to normalize.
  * @returns the original string, or null if the value is null or undefined.
  */
-export function stringOrNull(value: StringNullUndefined): StringNull {
+export function stringValueOrNull(value: StringNullUndefined): StringNull {
     return value ?? null;
 }
 
 /**
- * Normalizes a nullable number value by converting undefined to null.
+ * Normalizes a number to a number.
+ * Defaults to a specified fallback if the input is null, undefined, or not a number.
  *
- * Useful for preparing optional numeric fields for database inserts/updates.
- *
- * @param number the numeric value to normalize.
- * @returns the original number, or null if the value is null or undefined.
+ * @param number the raw input to be normalized.
+ * @returns a number.
  */
-export function numberOrNull(number: NumberNullUndefined): NumberNull {
-    return number ?? null;
+export function sanitizeNumberValue(number: NumberNullUndefined): NumberNull {
+    if (typeof number === 'number' && !Number.isNaN(number)) {
+        return Number(number);
+    } else if (number == null) {
+        return null;
+    } else {
+        return 0;
+    }
 }

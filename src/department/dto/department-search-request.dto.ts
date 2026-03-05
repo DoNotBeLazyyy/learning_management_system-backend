@@ -1,6 +1,6 @@
 import { PartialType, PickType, IntersectionType } from '@nestjs/swagger';
 import { PaginationRequestDto } from '../../core/pagination/dto/pagination-request.dto';
-import { DepartmentCreateRequestDto } from './department-create-request.dto';
+import { DepartmentRequestDto } from './department-request.dto';
 
 // prettier-ignore
 /**
@@ -10,11 +10,12 @@ import { DepartmentCreateRequestDto } from './department-create-request.dto';
 export class DepartmentSearchRequestDto extends IntersectionType(
     PartialType(
         PickType(
-            DepartmentCreateRequestDto,
+            DepartmentRequestDto,
             [
                 'name',
                 'code',
-                'room'
+                'room',
+                'isActive'
             ] as const
         )
     ),

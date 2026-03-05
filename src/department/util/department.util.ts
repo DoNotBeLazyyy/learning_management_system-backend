@@ -1,5 +1,6 @@
+// prettier-ignore
 import { StringNullUndefined } from 'src/core/common/dto/common.dto';
-import { sanitizeStringValue } from 'src/core/common/util/clean.util';
+import { stringValueOrEmpty } from 'src/core/common/util/clean.util';
 
 // prettier-ignore
 /**
@@ -11,6 +12,6 @@ import { sanitizeStringValue } from 'src/core/common/util/clean.util';
  */
 export function createDepartmentLikeParams(values: StringNullUndefined[]): string[] {
     return values.map((value) => (
-        `%${sanitizeStringValue(value?.trim())}%`
+        `%${stringValueOrEmpty(value?.trim())}%`
     ));
 }

@@ -18,3 +18,6 @@ export type NumberNullUndefined = number | null | undefined;
 
 // Date value that may also be null.
 export type DateNull = Date | null;
+
+// Tinyint flag type used for boolean-like database fields.
+export type TinyIntFlag = 0 | 1;

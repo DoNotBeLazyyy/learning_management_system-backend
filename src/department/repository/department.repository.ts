@@ -1,17 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { ResultSetHeader } from 'mysql2/promise';
 // prettier-ignore
-import { StringNullUndefined, StringUndefined } from 'src/core/common/dto/common.dto';
+import { NumberNullUndefined, TinyIntFlag } from 'src/core/common/dto/common.dto';
 import { BaseRepository } from 'src/core/common/repository/base.repository';
 // prettier-ignore
-import { getFirstRowOrNull, sanitizeNumberValue, stringOrNull } from 'src/core/common/util/clean.util';
+import { getFirstRowOrNull, sanitizeNumberValue, stringValueOrNull } from 'src/core/common/util/clean.util';
+import { toPaginationDto } from 'src/core/pagination/mapper/pagination.mapper';
 // prettier-ignore
-import { buildOrderByClause, toPaginationDto } from 'src/core/pagination/util/pagination.util';
+import { buildOrderByClause } from 'src/core/pagination/util/pagination.util';
 import { DatabaseService } from 'src/database/service/database.service';
 import { DepartmentCreateRequestDto } from '../dto/department-create-request.dto';
 // prettier-ignore
-import { DepartmentCountRow, DepartmentDuplicateField, DepartmentIdRow, PageableDepartmentDto, DepartmentRow } from '../dto/department-repository.dto';
+import { DepartmentCountRow, DepartmentDuplicateField, DepartmentIdRow, PageableDepartmentDto, DepartmentRow, DepartmentOptionRow } from '../dto/department-repository.dto';
 import { DepartmentSearchRequestDto } from '../dto/department-search-request.dto';
+import { DepartmentUpdateRequestDto } from '../dto/department-update-request.dto';
 import { createDepartmentLikeParams } from '../util/department.util';
 
 /**
@@ -61,10 +63,10 @@ export class DepartmentRepository extends BaseRepository {
             [
                 code,
                 name,
-                stringOrNull(room),
-                stringOrNull(email),
-                stringOrNull(phone),
-                stringOrNull(description),
+                stringValueOrNull(room),
+                stringValueOrNull(email),
+                stringValueOrNull(phone),
+                stringValueOrNull(description),
                 null
             ]
         );
@@ -80,7 +82,7 @@ export class DepartmentRepository extends BaseRepository {
      * @returns list rows and total count.
      */
     async findList(searchRequestDTO: DepartmentSearchRequestDto): Promise<PageableDepartmentDto> {
-        const { code, name, room, page, size } = searchRequestDTO;
+        const { code, name, room, page, size, isActive } = searchRequestDTO;
         const offset = (page - 1) * size;
         const sortableColumns = {
             id: 'id',
@@ -89,6 +91,7 @@ export class DepartmentRepository extends BaseRepository {
             room: 'room',
             email: 'email',
             phone: 'phone',
+            isActive: 'is_active',
             createdDate: 'created_date',
             updatedDate: 'updated_date'
         };
@@ -97,24 +100,33 @@ export class DepartmentRepository extends BaseRepository {
             sortableColumns,
             'ORDER BY created_date ASC'
         );
-        const total = await this.findCountByCodeAndNameAndRoom(
-            code,
-            name,
-            room
-        );
+        let isActiveWhereClause = '';
+        const params: Array<string | number> = createDepartmentLikeParams([name, code, room]);
+
+        if (isActive != null) {
+            isActiveWhereClause = 'AND is_active = ?';
+
+            params.push(isActive);
+        }
+
+        params.push(size, offset);
+
+        const total = await this.findCountByCodeAndNameAndRoom(code, name, room, isActive);
         const [rows] = await this.pool.query<DepartmentRow[]>(
             `SELECT
-                department_id,
+                department_id AS departmentId,
                 code,
                 name,
                 room,
                 email,
                 phone,
-                is_deleted,
-                created_by,
-                created_date,
-                updated_by,
-                updated_date
+                description,
+                is_deleted AS isDeleted,
+                is_active AS isActive,
+                created_by AS createdBy,
+                created_date AS createdDate,
+                updated_by AS updatedBy,
+                updated_date AS updatedDate
             FROM
                 department
             WHERE
@@ -122,18 +134,11 @@ export class DepartmentRepository extends BaseRepository {
                 AND name LIKE ?
                 AND code LIKE ?
                 AND COALESCE(room, '') LIKE ?
+                ${isActiveWhereClause}
             ${orderByClause}
             LIMIT ?
             OFFSET ?`,
-            [
-                ...createDepartmentLikeParams([
-                    code,
-                    name,
-                    room
-                ]),
-                size,
-                offset
-            ]
+            params
         );
 
         return toPaginationDto<DepartmentRow>(
@@ -146,38 +151,153 @@ export class DepartmentRepository extends BaseRepository {
         );
     }
 
+    // prettier-ignore
     /**
-     * Finds an active department by primary key.
+     * Retrieves department by its ID and whether it's deleted or not.
      *
      * @param departmentId the department ID.
+     * @param isDeleted the delete flag.
      * @return the full department row, or null if not found.
      */
-    async findById(departmentId: number): Promise<DepartmentRow | null> {
+    async findById(
+        departmentId: NumberNullUndefined,
+        isDeleted: TinyIntFlag = 1
+    ): Promise<DepartmentRow | null> {
         const [rows] = await this.pool.query<DepartmentRow[]>(
             `SELECT
-                department_id,
+                department_id AS departmentId,
                 code,
                 name,
                 room,
                 email,
                 phone,
                 description,
-                is_active,
-                is_deleted,
-                created_by,
-                created_date,
-                updated_by,
-                updated_date
+                is_deleted AS isDeleted,
+                is_active AS isActive,
+                created_by AS createdBy,
+                created_date AS createdDate,
+                updated_by AS updatedBy,
+                updated_date AS updatedDate
+            FROM
+                department
+            WHERE
+                department_id = ?
+                AND is_deleted = ?
+            LIMIT 1`,
+            [departmentId, isDeleted]
+        );
+
+        return getFirstRowOrNull(rows);
+    }
+
+    /**
+     * Returns active, non-deleted departments for select/dropdown options.
+     * Only the department ID and name are returned.
+     *
+     * @returns active department option rows.
+     */
+    async findActiveDepartmentOptions(): Promise<DepartmentOptionRow[]> {
+        const [rows] = await this.pool.query<DepartmentOptionRow[]>(
+            `SELECT
+                department_id AS departmentId,
+                name
             FROM
                 department
             WHERE
                 is_deleted = 0
+                AND is_active = 1
+            ORDER BY
+                created_date ASC`
+        );
+
+        return rows;
+    }
+
+    /**
+     * Updates an existing active department row by primary key.
+     * Soft-deleted rows are excluded from update.
+     *
+     * @param requestDto the department update payload.
+     * @returns the number of affected rows.
+     */
+    async updateById(requestDto: DepartmentUpdateRequestDto): Promise<boolean> {
+        const { departmentId, code, name, description, email, phone, room } =
+            requestDto;
+        const [result] = await this.pool.query<ResultSetHeader>(
+            `UPDATE
+                department
+            SET
+                code = ?,
+                name = ?,
+                room = ?,
+                email = ?,
+                phone = ?,
+                description = ?,
+                updated_date = NOW()
+            WHERE
+                is_deleted = 0
                 AND department_id = ?
             LIMIT 1`,
+            [
+                code,
+                name,
+                stringValueOrNull(room),
+                stringValueOrNull(email),
+                stringValueOrNull(phone),
+                stringValueOrNull(description),
+                departmentId
+            ]
+        );
+
+        return Boolean(result.affectedRows);
+    }
+
+    /**
+     * Updates the active flag of a non-deleted department.
+     *
+     * @param departmentId the department ID to update.
+     * @param isActive the active flag value (1 = active, 0 = inactive).
+     * @returns true if the department was updated; otherwise, false.
+     */
+    async updateIsActiveById(
+        departmentId: number,
+        isActive: TinyIntFlag
+    ): Promise<boolean> {
+        const [result] = await this.pool.query<ResultSetHeader>(
+            `UPDATE
+                department
+            SET
+                is_active = ?
+            WHERE
+                department_id = ?
+                AND is_deleted = 0`,
+            [isActive, departmentId]
+        );
+
+        return Boolean(result.affectedRows);
+    }
+
+    // prettier-ignore
+    /**
+     * Soft deletes a department by setting is_deleted = 1 and is_active = 0.
+     *
+     * @param departmentId the department ID to soft delete.
+     * @returns true if the department was updated; otherwise, false.
+     */
+    async softDeleteById(departmentId: number): Promise<boolean> {
+        const [result] = await this.pool.query<ResultSetHeader>(
+            `UPDATE
+                department
+            SET
+                is_deleted = 1,
+                is_active = 0
+            WHERE
+                department_id = ?
+                AND is_deleted = 0`,
             [departmentId]
         );
 
-        return getFirstRowOrNull(rows);
+        return Boolean(result.affectedRows);
     }
 
     // prettier-ignore
@@ -190,10 +310,20 @@ export class DepartmentRepository extends BaseRepository {
      * @returns total matching rows.
      */
     async findCountByCodeAndNameAndRoom(
-        code: StringUndefined,
-        name: StringUndefined,
-        room: StringUndefined
+        code?: string,
+        name?: string,
+        room?: string,
+        isActive?: TinyIntFlag
     ): Promise<number> {
+        const params: Array<string | number> = createDepartmentLikeParams([name, code, room]);
+        let isActiveWhereClause = '';
+
+        if (isActive != null) {
+            isActiveWhereClause = 'AND is_active = ?';
+
+            params.push(isActive);
+        }
+
         const [rows] = await this.pool.query<DepartmentCountRow[]>(
             `SELECT
                 COUNT(*) AS total
@@ -203,15 +333,15 @@ export class DepartmentRepository extends BaseRepository {
                 is_deleted = 0
                 AND code LIKE ?
                 AND name LIKE ?
-                AND COALESCE(room, '') LIKE ?`,
-            createDepartmentLikeParams([
-                code,
-                name,
-                room
-            ])
+                AND COALESCE(room, '') LIKE ?
+                ${isActiveWhereClause}`,
+            params
         );
+        const count = sanitizeNumberValue(rows[0]?.total);
 
-        return sanitizeNumberValue(rows[0]?.total);
+        return count
+            ? count
+            : 0;
     }
 
     // prettier-ignore
@@ -221,17 +351,20 @@ export class DepartmentRepository extends BaseRepository {
      *
      * @param duplicateColumn the allowed department duplicate field to check.
      * @param value the value to check for duplicates.
+     * @param departmentId the department ID to be excluded.
      * @returns true if a duplicate exists; otherwise, false.
      */
     async existByFieldAndDepartmentIdNot(
         duplicateColumn: DepartmentDuplicateField,
-        value: StringNullUndefined
+        value: string,
+        departmentId?: number
     ) {
         return this.existsByFieldAndIdNot<DepartmentIdRow, DepartmentDuplicateField>(
             duplicateColumn,
             value,
             this.tableName,
-            this.duplicateFieldColumns
+            this.duplicateFieldColumns,
+            departmentId
         );
     }
 }

@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 // prettier-ignore
-import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+
+import type { TinyIntFlag } from 'src/core/common/dto/common.dto';
 
 /**
  * Base DTO for department request payloads.
@@ -14,7 +16,7 @@ export class DepartmentRequestDto {
     @IsOptional()
     @IsInt()
     @Min(1)
-    department_id?: number;
+    departmentId?: number;
 
     @ApiProperty({
         description: 'Unique department code',
@@ -74,16 +76,21 @@ export class DepartmentRequestDto {
     @MaxLength(500)
     description?: string;
 
-    @ApiPropertyOptional({ description: 'Active flag', example: true })
-    @IsOptional()
-    @IsBoolean()
-    is_active?: boolean;
-
     @ApiPropertyOptional({
-        description: 'Soft delete flag (not used in normal create)',
-        example: false
+        description: 'Active flag (1 = active, 0 = inactive).',
+        example: 1,
+        enum: [0, 1]
     })
     @IsOptional()
-    @IsBoolean()
-    is_deleted?: boolean;
+    @IsIn([0, 1])
+    isActive?: TinyIntFlag;
+
+    @ApiPropertyOptional({
+        description: 'Soft delete flag (1 = deleted, 0 = not deleted).',
+        example: 0,
+        enum: [0, 1]
+    })
+    @IsOptional()
+    @IsIn([0, 1])
+    isDeleted?: TinyIntFlag;
 }
