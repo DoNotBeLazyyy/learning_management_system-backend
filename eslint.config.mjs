@@ -30,12 +30,12 @@ export default tseslint.config(
              */
 
             /* Your preferences */
-            'indent': ['error', 4],
-            'eol-last': ['error', 'never'],
+            indent: ['off'],
+            'eol-last': ['error', 'always'],
 
             /* Basic style (lightweight, low-friction) */
-            'quotes': ['error', 'single', { avoidEscape: true }],
-            'semi': ['error', 'always'],
+            quotes: ['error', 'single', { avoidEscape: true }],
+            semi: ['error', 'always'],
             'no-trailing-spaces': 'error',
             'no-multiple-empty-lines': ['error', { max: 1 }],
             'comma-dangle': ['error', 'never'],

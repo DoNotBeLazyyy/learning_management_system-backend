@@ -1,53 +1,89 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+// prettier-ignore
 import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
+/**
+ * Base DTO for department request payloads.
+ *
+ * Contains common department fields shared by create, update, and search request DTOs.
+ */
 export class DepartmentRequestDto {
-    /** Department ID (used only in some request contexts, not for create). */
+    @ApiPropertyOptional({
+        description: 'Department ID (used only in some request contexts).'
+    })
     @IsOptional()
     @IsInt()
     @Min(1)
-        department_id?: number;
+    department_id?: number;
 
-    /** Department code (must be unique). */
+    @ApiProperty({
+        description: 'Unique department code',
+        example: 'CCS',
+        maxLength: 50
+    })
     @IsString()
     @MaxLength(50)
-        code!: string;
+    code!: string;
 
-    /** Department name (display name). */
+    @ApiProperty({
+        description: 'Department name',
+        example: 'College of Computer Studies',
+        maxLength: 150
+    })
     @IsString()
     @MaxLength(150)
-        name!: string;
+    name!: string;
 
-    /** Assigned room/office of the department. */
+    @ApiPropertyOptional({
+        description: 'Department room/office',
+        example: 'Room 301',
+        maxLength: 100
+    })
     @IsOptional()
     @IsString()
     @MaxLength(100)
-        room?: string;
+    room?: string;
 
-    /** Department email address. */
+    @ApiPropertyOptional({
+        description: 'Department email',
+        example: 'ccs@school.edu',
+        maxLength: 255
+    })
     @IsOptional()
     @IsEmail()
     @MaxLength(255)
-        email?: string;
+    email?: string;
 
-    /** Department contact number. */
+    @ApiPropertyOptional({
+        description: 'Department phone',
+        example: '09123456789',
+        maxLength: 30
+    })
     @IsOptional()
     @IsString()
     @MaxLength(30)
-        phone?: string;
+    phone?: string;
 
-    /** Optional department description/notes. */
+    @ApiPropertyOptional({
+        description: 'Department description',
+        example: 'Handles computing-related programs',
+        maxLength: 500
+    })
     @IsOptional()
     @IsString()
     @MaxLength(500)
-        description?: string;
+    description?: string;
 
-    /** Active flag (true = active, false = inactive). */
+    @ApiPropertyOptional({ description: 'Active flag', example: true })
     @IsOptional()
     @IsBoolean()
-        is_active?: boolean;
+    is_active?: boolean;
 
-    /** Soft delete flag (excluded in normal create/update flows). */
+    @ApiPropertyOptional({
+        description: 'Soft delete flag (not used in normal create)',
+        example: false
+    })
     @IsOptional()
     @IsBoolean()
-        is_deleted?: boolean;
+    is_deleted?: boolean;
 }
